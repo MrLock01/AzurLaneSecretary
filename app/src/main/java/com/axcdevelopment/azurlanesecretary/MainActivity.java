@@ -99,6 +99,13 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    @Override
+    protected void onStart() {
+        super.onStart();
+        writeToList();
+    }
+
     public void setUpList() {
         File dir = new File(getFilesDir() + "/Ships-master/");
         Log.v("USERINFO", "directory: " + dir);
