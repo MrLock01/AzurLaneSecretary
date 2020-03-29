@@ -4,8 +4,11 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.PixelFormat;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -148,6 +151,8 @@ public class MainActivity extends AppCompatActivity {
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     public void writeToList() {
+        downloadZip();
+        /*
         Thread network = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -162,10 +167,38 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         network.start();
+         */
+
     }
 
+    long downloadID;
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     private void downloadZip() {
+        File file = new File(getFilesDir().getAbsolutePath() + "/");
+        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(URL))
+                .setTitle("Azur lane Secretary")
+                .setDescription("Checking for new shipfus")
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
+                .setDestinationUri(Uri.fromFile(file))
+                .setAllowedOverMetered(true)
+                .setAllowedOverRoaming(true);
+        DownloadManager downloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+        downloadID = downloadManager.enqueue(request);
+        BroadcastReceiver onDownloadComplete = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                //Fetching the download id received with the broadcast
+                long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                //Checking if the received broadcast is for our enqueued download by matching download id
+                if (downloadID == id) {
+                    Log.v("USERINFO", "Data refreshed");
+                    unpackZip(getFilesDir().getPath() + "/", "master.zip");
+                    setUpList();
+                }
+            }
+        };
+        registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        /*
         try (BufferedInputStream inputStream = new BufferedInputStream(new URL(URL).openStream());
              FileOutputStream fileOS = new FileOutputStream(new File(getFilesDir().getAbsolutePath() + "/", "master.zip"))) {
             Log.v("USERINFO", "attempting fetch");
@@ -179,6 +212,8 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             Log.v("USERINFO", "failed to fetch " + e.toString());
         }
+         */
+
     }
 
     private boolean unpackZip(String path, String zipname) {
