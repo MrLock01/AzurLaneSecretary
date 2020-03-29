@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <LinearLayout
+        android:id="@+id/linearLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        android:orientation="vertical">
+
+        <Switch
+            android:id="@+id/start"
+            android:layout_width="230dp"
+            android:layout_height="wrap_content"
+            android:text="Turn On:"
+            android:textSize="40sp"
+            android:switchPadding="10dp">
+
+        </Switch>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select a Ship Below:"
+            android:textSize="20dp"
+            android:layout_marginTop="20dp"
+            android:textColor="#000000"/>
+
+        <Spinner
+            android:id="@+id/select"
+            android:layout_width="230dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@+id/start"
+            app:layout_constraintLeft_toLeftOf="@+id/start"
+            android:layout_marginTop="10dp">
+
+        </Spinner>
+
+        <TextView
+            android:id="@+id/versionText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select a Skin Below:"
+            android:textSize="20dp"
+            android:layout_marginTop="20dp"
+            android:textColor="@android:color/black"/>
+
+        <Spinner
+            android:id="@+id/selectVersion"
+            android:layout_width="230dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@+id/start"
+            app:layout_constraintLeft_toLeftOf="@+id/start"
+            android:layout_marginTop="10dp">
+
+        </Spinner>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select Size:"
+            android:textSize="20dp"
+            android:layout_marginTop="20dp"
+            android:textColor="@android:color/black"/>
+
+
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <SeekBar
+                android:id="@+id/size"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                app:layout_constraintRight_toLeftOf="@+id/editSize"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent">
+
+            </SeekBar>
+
+            <EditText
+                android:id="@+id/editSize"
+                android:layout_width="42dp"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:textColor="@android:color/black"
+                android:background="@null"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent">
+
+            </EditText>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
