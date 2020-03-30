@@ -6,7 +6,7 @@ import java.util.ArrayList;
 
 import androidx.annotation.NonNull;
 
-public class Shipfu {
+public class Shipfu implements Comparable{
 
     private String name;
     private ArrayList<String> skins;
@@ -66,5 +66,14 @@ public class Shipfu {
     @Override
     public String toString() {
         return name;
+    }
+
+    @Override
+    public int compareTo(Object o) {
+        if (o instanceof Shipfu) {
+            Shipfu x = (Shipfu) o;
+            return name.compareTo(x.getName());
+        }
+        return 0;
     }
 }

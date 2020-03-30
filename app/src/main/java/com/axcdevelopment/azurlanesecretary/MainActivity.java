@@ -1,6 +1,5 @@
 package com.axcdevelopment.azurlanesecretary;
 
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
@@ -33,55 +32,70 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.BufferedInputStream;
+import com.dropbox.core.DbxException;
+import com.dropbox.core.DbxRequestConfig;
+import com.dropbox.core.v2.DbxClientV2;
+import com.dropbox.core.v2.files.ListFolderResult;
+import com.dropbox.core.v2.files.Metadata;
+
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Random;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import java.util.Scanner;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static ArrayList<Shipfu> shipfus;
-    private static Shipfu shipfu;
-    private static int version;
-    private static Context context;
-    private static Switch onOffSwitch;
-    private static Spinner selectorSpinner;
-    private static Spinner versionSelectorSpinner;
-    private static TextView textView;
-    private static SeekBar sizeSeekBar;
-    private static EditText sizeEditText;
-    private static ImageView overlayPowerBtn;
-    private static WindowManager windowManager;
-    private static WindowManager.LayoutParams params;
-    private static MediaPlayer mediaPlayer;
+    private ArrayList<Shipfu> shipfus;
+    private Shipfu shipfu;
+    private int version;
+    private Context context;
+    private Switch onOffSwitch;
+    private Spinner selectorSpinner;
+    private Spinner versionSelectorSpinner;
+    private SeekBar sizeSeekBar;
+    private EditText sizeEditText;
+    private ImageView overlayPowerBtn;
+    private WindowManager windowManager;
+    private WindowManager.LayoutParams params;
+    private MediaPlayer mediaPlayer;
     private static int size;
-    private static final String URL = "https://github.com/alandaboi/Ships/archive/master.zip";
+    private static String directory;
+    private static File dir;
+    private static final String ACCESS_TOKEN = "Lg5HLxplGRAAAAAAAAAADxjt40fswX-WsdoBJvO0BKYiR2uUu4SG0UlcnYKMlELt";
+    private static DbxRequestConfig config;
+    private static DbxClientV2 client;
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        directory = getFilesDir() + "/";
+        dir = getFilesDir();
+        config = DbxRequestConfig.newBuilder("ALS").build();
+        client = new DbxClientV2(config, ACCESS_TOKEN);
         shipfus = new ArrayList<>();
         shipfu = new Shipfu();
         context = this;
+        selectorSpinner = findViewById(R.id.select);
+        versionSelectorSpinner = findViewById(R.id.selectVersion);
         mediaPlayer = new MediaPlayer();
         size = 200;
 
-        setUpList();
+        // sync files with Dropbox
+        syncDropbox();
 
+        // set up spinners with synced files
         setUpSpinner();
 
+        // set up size selection
         setUpSeekBar();
-
         setUpEditText();
 
         // Check for overlay permission. If not enabled, request for it. If enabled, show the overlay
@@ -93,142 +107,115 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.fromParts("package", getPackageName(), null)));
         }
 
+        // set up on off switch
         setUpSwitch();
-
-        writeToList();
-
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     protected void onStart() {
         super.onStart();
-        writeToList();
-    }
-
-    public void setUpList() {
-        File dir = new File(getFilesDir() + "/Ships-master/");
-        Log.v("USERINFO", "directory: " + dir);
-        Log.v("USERINFO", "zip directory exists: " + dir.exists());
-        if (dir.exists()) {
-            Log.v("USERINFO", dir.listFiles().toString());
-            for (File file : dir.listFiles()) {
-                String filename = file.getName();
-                String fileExtension = filename.substring(filename.length() - 4);
-                if (fileExtension.equalsIgnoreCase(".png")) {
-                    String[] split = filename.split("-");
-                    Log.v("USERINFO", "registering shipfu: " + split[0]);
-                    boolean newShip = true;
-                    for (Shipfu s : shipfus) {
-                        if (s.getName().equalsIgnoreCase(split[0])) {
-                            newShip = false;
-                            break;
-                        }
-                    }
-                    if (newShip) {
-                        shipfu = new Shipfu();
-                        shipfu.setName(split[0]);
-                        shipfus.add(shipfu);
-                    }
-                    shipfus.get(shipfus.indexOf(shipfu)).getSkins().add(split[1]);
-                    shipfus.get(shipfus.indexOf(shipfu)).getChibi().add(Uri.parse(file.getPath()));
-                } else if (fileExtension.equalsIgnoreCase(".ogg")) {
-                    String name = filename.substring(0, filename.length() - 5);
-                    boolean newShip = true;
-                    for (Shipfu s : shipfus) {
-                        if (s.getName().equalsIgnoreCase(name)) {
-                            newShip = false;
-                            break;
-                        }
-                    }
-                    if (newShip) {
-                        shipfu = new Shipfu();
-                        shipfu.setName(name);
-                        shipfus.add(shipfu);
-                    }
-                    shipfus.get(shipfus.indexOf(shipfu)).getVoiceLines().add(Uri.parse(file.getPath()));
+        File last = new File(directory + "last.txt");
+        if (last.exists()) {
+            try {
+                Scanner in = new Scanner(last);
+                if (selectorSpinner != null && in.hasNext()) {
+                    shipfu = shipfus.get(shipfus.indexOf(in.next()));
+                    version = in.nextInt();
+                    selectorSpinner.setSelection(shipfus.indexOf(in.next()));
+                    versionSelectorSpinner.setSelection(version);
                 }
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
             }
-            setUpSpinner();
         }
+        syncDropbox();
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-    public void writeToList() {
-        Thread network = new Thread(new Runnable() {
+    public void syncDropbox() {
+        final Thread network = new Thread(new Runnable() {
             @Override
             public void run() {
-                downloadZip();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        unpackZip(getFilesDir().getPath() + "/", "master.zip");
-                        setUpList();
+                try {
+                    ListFolderResult folders = client.files().listFolder("");
+                    Log.v("USERINFO", "Root Folder: " + folders.toString());
+                    for (Metadata folderMeta : folders.getEntries()) {
+                        String folder = folderMeta.getName();
+                        Log.v("USERINFO", folder);
+                        File subDir = new File(directory + folder);
+                        if (!subDir.exists()) {
+                            Log.v("USERINFO", "Folder created: " + folder);
+                            File fil = new File(directory, folder);
+                            fil.mkdirs();
+                        }
+                        ListFolderResult subFolder = client.files().listFolder("/" + folder);
+                        for (Metadata fileMeta : subFolder.getEntries()) {
+                            String file = fileMeta.getName();
+                            if (!(new File(directory + folder + "/" + file).exists())) {
+                                OutputStream out = new FileOutputStream(directory + folder + "/" + file);
+                                client.files().downloadBuilder("/" + folder + "/" + file)
+                                        .download(out);
+                                out.close();
+                            }
+                        }
+                        dir = new File(directory + folder);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (dir.exists()) {
+                                    Log.v("USERINFO", dir.listFiles().toString());
+                                    for (File file : dir.listFiles()) {
+                                        String filename = file.getName();
+                                        String fileExtension = filename.substring(filename.length() - 4);
+                                        if (fileExtension.equalsIgnoreCase(".png")) {
+                                            String[] split = filename.split("-");
+                                            Log.v("USERINFO", "registering shipfu: " + split[0]);
+                                            boolean newShip = true;
+                                            for (Shipfu s : shipfus) {
+                                                if (s.getName().equalsIgnoreCase(split[0])) {
+                                                    newShip = false;
+                                                    break;
+                                                }
+                                            }
+                                            if (newShip) {
+                                                shipfu = new Shipfu();
+                                                shipfu.setName(split[0]);
+                                                shipfus.add(shipfu);
+                                            }
+                                            shipfus.get(shipfus.indexOf(shipfu)).getSkins().add(split[1]);
+                                            shipfus.get(shipfus.indexOf(shipfu)).getChibi().add(Uri.parse(file.getPath()));
+                                        } else if (fileExtension.equalsIgnoreCase(".ogg")) {
+                                            String name = filename.substring(0, filename.length() - 5);
+                                            boolean newShip = true;
+                                            for (Shipfu s : shipfus) {
+                                                if (s.getName().equalsIgnoreCase(name)) {
+                                                    newShip = false;
+                                                    break;
+                                                }
+                                            }
+                                            if (newShip) {
+                                                shipfu = new Shipfu();
+                                                shipfu.setName(name);
+                                                shipfus.add(shipfu);
+                                            }
+                                            shipfus.get(shipfus.indexOf(shipfu)).getVoiceLines().add(Uri.parse(file.getPath()));
+                                        }
+                                    }
+                                }
+                                Collections.sort(shipfus);
+                                setUpSpinner();
+                            }
+                        });
                     }
-                });
+                } catch (DbxException | FileNotFoundException e) {
+                    Log.v("USERINFO", "Error: " + e.getMessage());
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    Log.v("USERINFO", "Error: " + e.getMessage());
+                    e.printStackTrace();
+                }
             }
         });
         network.start();
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-    private void downloadZip() {
-        try (BufferedInputStream inputStream = new BufferedInputStream(new URL(URL).openStream());
-             FileOutputStream fileOS = new FileOutputStream(new File(getFilesDir().getAbsolutePath() + "/", "master.zip"))) {
-            Log.v("USERINFO", "attempting fetch");
-            byte data[] = new byte[5120];
-            int byteContent;
-            while ((byteContent = inputStream.read(data, 0, 5120)) != -1) {
-                fileOS.write(data, 0, byteContent);
-                Log.v("USERINFO", "fetching, please wait");
-            }
-            Log.v("USERINFO", "zip downloaded");
-        } catch (IOException e) {
-            Log.v("USERINFO", "failed to fetch " + e.toString());
-        }
-    }
-
-    private boolean unpackZip(String path, String zipname) {
-        InputStream is;
-        ZipInputStream zis;
-        try {
-            String filename;
-            is = new FileInputStream(path + zipname);
-            zis = new ZipInputStream(new BufferedInputStream(is));
-            ZipEntry ze;
-            byte[] buffer = new byte[1024];
-            int count;
-            while ((ze = zis.getNextEntry()) != null) {
-                filename = ze.getName();
-                Log.v("USERINFO", "extracting: " + path + filename);
-                // Need to create directories if not exists, or
-                // it will generate an Exception...
-                if (ze.isDirectory()) {
-                    File fmd = new File(path + filename);
-                    fmd.mkdirs();
-                    continue;
-                }
-                if (new File(path + filename).exists()) {
-                    Log.v("USERINFO", "file " + new File(path + filename).toString() + " already exists");
-                    continue;
-                }
-                FileOutputStream fout = new FileOutputStream(path + filename);
-                while ((count = zis.read(buffer)) != -1) {
-                    fout.write(buffer, 0, count);
-                }
-                Log.v("USERINFO", "File extracted to: " + path);
-                fout.close();
-                zis.closeEntry();
-            }
-            zis.close();
-            Log.v("USERINFO", "zip extration successful");
-        }
-        catch(IOException e) {
-            e.printStackTrace();
-            Log.v("USERINFO", "extraction failed:" + e.toString());
-            return false;
-        }
-        return true;
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -236,7 +223,6 @@ public class MainActivity extends AppCompatActivity {
         // Starts the button overlay.
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         overlayPowerBtn = new ImageView(context);
-        //overlayPowerBtn.setImageResource(R.drawable.prinz_eugen_chibi);
         overlayPowerBtn.setImageURI(shipfu.getChibi().get(version));
         Log.v("USERINPUT", "Image Set");
         int LAYOUT_FLAG;
@@ -294,9 +280,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setUpSpinner() {
-        selectorSpinner = findViewById(R.id.select);
-        versionSelectorSpinner = findViewById(R.id.selectVersion);
-        textView = findViewById(R.id.versionText);
         selectorSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -308,14 +291,21 @@ public class MainActivity extends AppCompatActivity {
                 versionSelectorSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                     @Override
                     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                        String skin = shipfu.getSkins().get(position);
                         version = position;
-                        if (overlayPowerBtn != null) {
-                            windowManager.removeView(overlayPowerBtn);
-                            startPowerOverlay();
+                        if (mediaPlayer != null) {
+                            mediaPlayer.stop();
                         }
-                        // Showing selected spinner item
-                        Toast.makeText(parent.getContext(), skin + " selected", Toast.LENGTH_SHORT).show();
+                        File last = new File(directory + "last.txt");
+                        if (last.exists())
+                            last.delete();
+                        new File(directory, "last.txt");
+                        try {
+                            PrintWriter writer = new PrintWriter(last);
+                            writer.print(shipfu.getName() + " " + version);
+                        } catch (FileNotFoundException e) {
+                            e.printStackTrace();
+                        }
+                        onOffSwitch.setChecked(false);
                     }
 
                     @Override
@@ -427,6 +417,7 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         if (overlayPowerBtn != null)
             windowManager.removeView(overlayPowerBtn);
+
     }
 
     private class InputFilterMinMax implements InputFilter {
