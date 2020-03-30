@@ -361,7 +361,7 @@ public class MainActivity extends AppCompatActivity {
         onOffSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
+                if (isChecked && shipfus != null && !shipfus.isEmpty()) {
                     if (!shipfus.get(selectorSpinner.getSelectedItemPosition()).getChibi().isEmpty())
                         startPowerOverlay();
                     else {
