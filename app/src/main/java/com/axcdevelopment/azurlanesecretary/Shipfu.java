@@ -76,4 +76,14 @@ public class Shipfu implements Comparable{
         }
         return 0;
     }
+
+    public Shipfu clone() {
+        Shipfu c = new Shipfu();
+        c.setName(name);
+        c.setChibi(chibi);
+        c.setSkins(skins);
+        c.setVoiceLines(voiceLines);
+        c.setStandard(standard);
+        return c;
+    }
 }

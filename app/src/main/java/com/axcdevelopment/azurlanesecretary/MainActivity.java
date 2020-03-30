@@ -52,8 +52,6 @@ import java.util.Scanner;
 public class MainActivity extends AppCompatActivity {
 
     private ArrayList<Shipfu> shipfus;
-    private Shipfu shipfu;
-    private int version;
     private Context context;
     private Switch onOffSwitch;
     private Spinner selectorSpinner;
@@ -75,13 +73,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+    }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
         directory = getFilesDir() + "/";
         dir = getFilesDir();
         config = DbxRequestConfig.newBuilder("ALS").build();
         client = new DbxClientV2(config, ACCESS_TOKEN);
         shipfus = new ArrayList<>();
-        shipfu = new Shipfu();
         context = this;
         selectorSpinner = findViewById(R.id.select);
         versionSelectorSpinner = findViewById(R.id.selectVersion);
@@ -111,26 +112,6 @@ public class MainActivity extends AppCompatActivity {
         setUpSwitch();
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        File last = new File(directory + "last.txt");
-        if (last.exists()) {
-            try {
-                Scanner in = new Scanner(last);
-                if (selectorSpinner != null && in.hasNext()) {
-                    shipfu = shipfus.get(shipfus.indexOf(in.next()));
-                    version = in.nextInt();
-                    selectorSpinner.setSelection(shipfus.indexOf(in.next()));
-                    versionSelectorSpinner.setSelection(version);
-                }
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
-        }
-        syncDropbox();
-    }
-
     public void syncDropbox() {
         final Thread network = new Thread(new Runnable() {
             @Override
@@ -157,54 +138,7 @@ public class MainActivity extends AppCompatActivity {
                                 out.close();
                             }
                         }
-                        dir = new File(directory + folder);
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                if (dir.exists()) {
-                                    Log.v("USERINFO", dir.listFiles().toString());
-                                    for (File file : dir.listFiles()) {
-                                        String filename = file.getName();
-                                        String fileExtension = filename.substring(filename.length() - 4);
-                                        if (fileExtension.equalsIgnoreCase(".png")) {
-                                            String[] split = filename.split("-");
-                                            Log.v("USERINFO", "registering shipfu: " + split[0]);
-                                            boolean newShip = true;
-                                            for (Shipfu s : shipfus) {
-                                                if (s.getName().equalsIgnoreCase(split[0])) {
-                                                    newShip = false;
-                                                    break;
-                                                }
-                                            }
-                                            if (newShip) {
-                                                shipfu = new Shipfu();
-                                                shipfu.setName(split[0]);
-                                                shipfus.add(shipfu);
-                                            }
-                                            shipfus.get(shipfus.indexOf(shipfu)).getSkins().add(split[1]);
-                                            shipfus.get(shipfus.indexOf(shipfu)).getChibi().add(Uri.parse(file.getPath()));
-                                        } else if (fileExtension.equalsIgnoreCase(".ogg")) {
-                                            String name = filename.substring(0, filename.length() - 5);
-                                            boolean newShip = true;
-                                            for (Shipfu s : shipfus) {
-                                                if (s.getName().equalsIgnoreCase(name)) {
-                                                    newShip = false;
-                                                    break;
-                                                }
-                                            }
-                                            if (newShip) {
-                                                shipfu = new Shipfu();
-                                                shipfu.setName(name);
-                                                shipfus.add(shipfu);
-                                            }
-                                            shipfus.get(shipfus.indexOf(shipfu)).getVoiceLines().add(Uri.parse(file.getPath()));
-                                        }
-                                    }
-                                }
-                                Collections.sort(shipfus);
-                                setUpSpinner();
-                            }
-                        });
+                        setupShipfu(folder);
                     }
                 } catch (DbxException | FileNotFoundException e) {
                     Log.v("USERINFO", "Error: " + e.getMessage());
@@ -218,12 +152,46 @@ public class MainActivity extends AppCompatActivity {
         network.start();
     }
 
+    private void setupShipfu(final String folder) {
+        dir = new File(directory + folder);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (dir.exists()) {
+                    Shipfu ship = new Shipfu();
+                    ship.setName(folder);
+                    if (shipfus.contains(folder))
+                        return;
+                    shipfus.add(ship);
+                    Log.v("USERINFO", dir.listFiles().toString());
+                    for (File file : dir.listFiles()) {
+                        String filename = file.getName();
+                        String fileExtension = filename.substring(filename.length() - 4);
+                        Log.v("USERINFO", "registering shipfu: " + folder);
+                        if (fileExtension.equalsIgnoreCase(".png")) {
+                            String[] split = filename.split("-");
+                            shipfus.get(shipfus.indexOf(ship)).getSkins().add(split[1]);
+                            shipfus.get(shipfus.indexOf(ship)).getChibi().add(Uri.parse(file.getPath()));
+                        } else if (fileExtension.equalsIgnoreCase(".ogg")) {
+                            shipfus.get(shipfus.indexOf(ship)).getVoiceLines().add(Uri.parse(file.getPath()));
+                        }
+                    }
+                }
+                Collections.sort(shipfus);
+                selectorDataAdapter.notifyDataSetChanged();
+                if (versionDataAdapter != null)
+                    versionDataAdapter.notifyDataSetChanged();
+            }
+        });
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     private void startPowerOverlay() {
         // Starts the button overlay.
+        final Shipfu shipfu = shipfus.get(selectorSpinner.getSelectedItemPosition());
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         overlayPowerBtn = new ImageView(context);
-        overlayPowerBtn.setImageURI(shipfu.getChibi().get(version));
+        overlayPowerBtn.setImageURI(shipfu.getChibi().get(versionSelectorSpinner.getSelectedItemPosition()));
         Log.v("USERINPUT", "Image Set");
         int LAYOUT_FLAG;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -275,60 +243,45 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
         });
-
         windowManager.addView(overlayPowerBtn, params);
     }
 
+    private ArrayAdapter<Shipfu> selectorDataAdapter;
+    private ArrayAdapter<String> versionDataAdapter;
     private void setUpSpinner() {
         selectorSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // On selecting a spinner item
-                if (mediaPlayer != null) {
-                    mediaPlayer.stop();
-                }
-                shipfu = shipfus.get(position);
+                if (versionDataAdapter != null)
+                    versionDataAdapter.notifyDataSetChanged();
                 versionSelectorSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                     @Override
                     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                        version = position;
-                        if (mediaPlayer != null) {
-                            mediaPlayer.stop();
+                        if (overlayPowerBtn != null) {
+                            overlayPowerBtn.setImageURI(shipfus.get(selectorSpinner.getSelectedItemPosition()).getChibi().get(position));
                         }
-                        File last = new File(directory + "last.txt");
-                        if (last.exists())
-                            last.delete();
-                        new File(directory, "last.txt");
-                        try {
-                            PrintWriter writer = new PrintWriter(last);
-                            writer.print(shipfu.getName() + " " + version);
-                        } catch (FileNotFoundException e) {
-                            e.printStackTrace();
+                        if (versionDataAdapter != null) {
+                            versionDataAdapter.notifyDataSetChanged();
                         }
-                        onOffSwitch.setChecked(false);
                     }
-
                     @Override
-                    public void onNothingSelected(AdapterView<?> parent) {
-
-                    }
+                    public void onNothingSelected(AdapterView<?> parent) {}
                 });
-                ArrayAdapter<String> dataAdapter =
-                        new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, shipfu.getSkins());
-                dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                versionSelectorSpinner.setAdapter(dataAdapter);
+                if (mediaPlayer != null)
+                    mediaPlayer.stop();
+                onOffSwitch.setChecked(false);
+                versionDataAdapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, shipfus.get(selectorSpinner.getSelectedItemPosition()).getSkins());
+                versionDataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                versionSelectorSpinner.setAdapter(versionDataAdapter);
             }
-
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
 
             }
         });
-        ArrayAdapter<Shipfu> dataAdapter =
-                new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, shipfus);
-        dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        selectorSpinner.setAdapter(dataAdapter);
-
+        selectorDataAdapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, shipfus);
+        selectorDataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        selectorSpinner.setAdapter(selectorDataAdapter);
     }
 
     private void setUpSeekBar() {
@@ -395,7 +348,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked) {
-                    if (!shipfu.getChibi().isEmpty())
+                    if (!shipfus.get(selectorSpinner.getSelectedItemPosition()).getChibi().isEmpty())
                         startPowerOverlay();
                     else {
                         onOffSwitch.setChecked(false);
@@ -417,7 +370,6 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         if (overlayPowerBtn != null)
             windowManager.removeView(overlayPowerBtn);
-
     }
 
     private class InputFilterMinMax implements InputFilter {
