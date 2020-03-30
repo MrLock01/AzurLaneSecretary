@@ -43,11 +43,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Random;
-import java.util.Scanner;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -73,11 +71,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-    }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
         directory = getFilesDir() + "/";
         dir = getFilesDir();
         config = DbxRequestConfig.newBuilder("ALS").build();
@@ -85,12 +79,8 @@ public class MainActivity extends AppCompatActivity {
         shipfus = new ArrayList<>();
         context = this;
         selectorSpinner = findViewById(R.id.select);
-        versionSelectorSpinner = findViewById(R.id.selectVersion);
         mediaPlayer = new MediaPlayer();
         size = 200;
-
-        // sync files with Dropbox
-        syncDropbox();
 
         // set up spinners with synced files
         setUpSpinner();
@@ -110,6 +100,22 @@ public class MainActivity extends AppCompatActivity {
 
         // set up on off switch
         setUpSwitch();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // sync files with Dropbox
+        syncFiles();
+        syncDropbox();
+    }
+
+    public void syncFiles() {
+        if (getFilesDir().listFiles() != null) {
+            for (File file : getFilesDir().listFiles()) {
+                setupShipfu(file.getName().replace("/", ""));
+            }
+        }
     }
 
     public void syncDropbox() {
@@ -160,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
                 if (dir.exists()) {
                     Shipfu ship = new Shipfu();
                     ship.setName(folder);
-                    if (shipfus.contains(folder))
+                    if (listContains(folder) || dir.listFiles() == null)
                         return;
                     shipfus.add(ship);
                     Log.v("USERINFO", dir.listFiles().toString());
@@ -183,6 +189,13 @@ public class MainActivity extends AppCompatActivity {
                     versionDataAdapter.notifyDataSetChanged();
             }
         });
+    }
+
+    private boolean listContains(String name) {
+        for (Shipfu s : shipfus)
+            if(s.getName().equals(name))
+                return true;
+        return false;
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -254,6 +267,7 @@ public class MainActivity extends AppCompatActivity {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 if (versionDataAdapter != null)
                     versionDataAdapter.notifyDataSetChanged();
+                versionSelectorSpinner = findViewById(R.id.selectVersion);
                 versionSelectorSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                     @Override
                     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {

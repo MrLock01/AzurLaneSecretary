@@ -5,8 +5,9 @@ import android.net.Uri;
 import java.util.ArrayList;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
-public class Shipfu implements Comparable{
+public class Shipfu implements Comparable {
 
     private String name;
     private ArrayList<String> skins;
@@ -85,5 +86,17 @@ public class Shipfu implements Comparable{
         c.setVoiceLines(voiceLines);
         c.setStandard(standard);
         return c;
+    }
+
+    @Override
+    public boolean equals(@Nullable Object obj) {
+        if (obj instanceof String)
+            return ((String) obj).equalsIgnoreCase(name);
+        return super.equals(obj);
+    }
+
+    @Override
+    public int hashCode() {
+        return super.hashCode();
     }
 }
