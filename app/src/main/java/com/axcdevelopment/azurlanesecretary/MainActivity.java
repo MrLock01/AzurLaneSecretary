@@ -36,6 +36,8 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.toptoche.searchablespinnerlibrary.SearchableSpinner;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
@@ -58,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
     private String name;
     private Context context;
     private Switch onOffSwitch;
-    private Spinner selectorSpinner;
+    private SearchableSpinner selectorSpinner;
     private Spinner versionSelectorSpinner;
     private SeekBar sizeSeekBar;
     private EditText sizeEditText;
@@ -80,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
         shipfus = new ArrayList<>();
         context = this;
         selectorSpinner = findViewById(R.id.select);
+        selectorSpinner.setTitle("Select Shipfu");
         mediaPlayer = new MediaPlayer();
         size = 200;
 

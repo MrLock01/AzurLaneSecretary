@@ -34,7 +34,7 @@
             android:layout_marginTop="20dp"
             android:textColor="#000000"/>
 
-        <Spinner
+        <com.toptoche.searchablespinnerlibrary.SearchableSpinner
             android:id="@+id/select"
             android:layout_width="230dp"
             android:layout_height="wrap_content"
@@ -42,7 +42,7 @@
             app:layout_constraintLeft_toLeftOf="@+id/start"
             android:layout_marginTop="10dp">
 
-        </Spinner>
+        </com.toptoche.searchablespinnerlibrary.SearchableSpinner>
 
         <TextView
             android:id="@+id/versionText"
