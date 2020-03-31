@@ -135,7 +135,6 @@ public class MainActivity extends AppCompatActivity {
                     while ((str = in.readLine()) != null) {
                         if (listContains(str))
                             continue;
-                        Toast.makeText(context, "Downloading " + str + " files", Toast.LENGTH_SHORT);
                         Log.v("USERINFO", "Online ship " + str + " registered");
                         try (BufferedInputStream inputStream = new BufferedInputStream(new URL(URL + str.replace(" ", "%20") + ".zip").openStream());
                              FileOutputStream fileOS = new FileOutputStream(new File(directory, str + ".zip"))) {
@@ -151,7 +150,6 @@ public class MainActivity extends AppCompatActivity {
                         }
                         unpackZip(directory, str + ".zip");
                         setupShipfu(str);
-                        Toast.makeText(context, str + " registered", Toast.LENGTH_SHORT);
                     }
                     in.close();
                 } catch (MalformedURLException e) {
