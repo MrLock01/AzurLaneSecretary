@@ -73,13 +73,11 @@ public class MainActivity extends AppCompatActivity {
     private static File dir;
     private static final String URL = "https://github.com/alandaboi/ALSSupportFiles/raw/master/";
 
-    @SuppressLint("SourceLockedOrientationActivity")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         directory = getFilesDir() + "/";
         dir = getFilesDir();
         shipfus = new ArrayList<>();
