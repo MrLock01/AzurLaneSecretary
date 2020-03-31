@@ -78,25 +78,4 @@ public class Shipfu implements Comparable {
         return 0;
     }
 
-    public Shipfu clone() {
-        Shipfu c = new Shipfu();
-        c.setName(name);
-        c.setChibi(chibi);
-        c.setSkins(skins);
-        c.setVoiceLines(voiceLines);
-        c.setStandard(standard);
-        return c;
-    }
-
-    @Override
-    public boolean equals(@Nullable Object obj) {
-        if (obj instanceof String)
-            return ((String) obj).equalsIgnoreCase(name);
-        return super.equals(obj);
-    }
-
-    @Override
-    public int hashCode() {
-        return super.hashCode();
-    }
 }
