@@ -8,12 +8,12 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.graphics.PixelFormat;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.PersistableBundle;
 import android.provider.Settings;
 import android.text.InputFilter;
 import android.text.Spanned;
@@ -73,10 +73,13 @@ public class MainActivity extends AppCompatActivity {
     private static File dir;
     private static final String URL = "https://github.com/alandaboi/ALSSupportFiles/raw/master/";
 
+    @SuppressLint("SourceLockedOrientationActivity")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        setRequestedOrientation (ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         directory = getFilesDir() + "/";
         dir = getFilesDir();
         shipfus = new ArrayList<>();
@@ -111,6 +114,15 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
         syncFiles();
         syncOnline();
+        int index = -1;
+        for (int x = 0; x < shipfus.size(); x++) {
+            String ship = this.getSharedPreferences("MyPref", 0).getString("name", null);
+            Log.v("USERINFO", "ship = " + ship + ", size: " + shipfus.size());
+            if (shipfus.get(x).getName().equalsIgnoreCase(ship))
+                index = x;
+        }
+        selectorSpinner.setSelection(index);
+        Log.v("USERINFO", "Index: " + index);
     }
 
     public void syncFiles() {
@@ -351,6 +363,9 @@ public class MainActivity extends AppCompatActivity {
                 versionDataAdapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, shipfus.get(selectorSpinner.getSelectedItemPosition()).getSkins());
                 versionDataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 versionSelectorSpinner.setAdapter(versionDataAdapter);
+                name = shipfus.get(selectorSpinner.getSelectedItemPosition()).getName();
+                Log.v("USERINFO", "name = " + name);
+                context.getSharedPreferences("MyPref", 0).edit().clear().putString("name", name).commit();
             }
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
